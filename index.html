@@ -504,7 +504,7 @@
                 } else {
                     // Standard header names — detect by column name
                     emailIdx = findColumnByHeader(headers, ['email', 'e-mail', 'email address']);
-                    phoneIdx = findColumnByHeader(headers, ['phone', 'phone number', 'telephone', 'mobile']);
+                    phoneIdx = findColumnByHeader(headers, ['phone', 'phone_number', 'phone number', 'phonenumber', 'telephone', 'mobile']);
                     fullNameIdx = findColumnByHeader(headers, ['full name', 'full_name', 'fullname', 'name']);
                     firstNameIdx = findColumnByHeader(headers, ['first name', 'firstname', 'first', 'fname']);
                     lastNameIdx = findColumnByHeader(headers, ['last name', 'lastname', 'last', 'lname', 'surname']);
