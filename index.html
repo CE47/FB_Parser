@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FB Leads CSV Cleaner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            color: #333;
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 0.5rem;
+            color: #1a1a2e;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 2rem;
+            font-size: 0.95rem;
+        }
+
+        .drop-zone {
+            border: 3px dashed #cbd5e0;
+            border-radius: 12px;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #fff;
+            margin-bottom: 1.5rem;
+        }
+
+        .drop-zone:hover,
+        .drop-zone.dragover {
+            border-color: #4299e1;
+            background: #ebf8ff;
+        }
+
+        .drop-zone p {
+            font-size: 1.1rem;
+            color: #4a5568;
+            margin-bottom: 0.5rem;
+        }
+
+        .drop-zone .hint {
+            font-size: 0.85rem;
+            color: #a0aec0;
+        }
+
+        .drop-zone .icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        #file-input {
+            display: none;
+        }
+
+        .stats {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .stat-card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 1rem 1.5rem;
+            flex: 1;
+            min-width: 150px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .stat-card .label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: #718096;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-card .value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #2d3748;
+        }
+
+        .actions {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-download {
+            background: #48bb78;
+            color: #fff;
+        }
+
+        .btn-download:hover:not(:disabled) {
+            background: #38a169;
+        }
+
+        .btn-clear {
+            background: #fc8181;
+            color: #fff;
+        }
+
+        .btn-clear:hover:not(:disabled) {
+            background: #f56565;
+        }
+
+        .table-wrapper {
+            background: #fff;
+            border-radius: 12px;
+            overflow: auto;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            max-height: 60vh;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            background: #2d3748;
+            color: #fff;
+            padding: 0.85rem 1rem;
+            text-align: left;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+
+        td {
+            padding: 0.75rem 1rem;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.9rem;
+        }
+
+        tr:last-child td {
+            border-bottom: none;
+        }
+
+        tr:hover td {
+            background: #f7fafc;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #a0aec0;
+        }
+
+        .file-list {
+            margin-bottom: 1.5rem;
+        }
+
+        .file-list h3 {
+            font-size: 0.9rem;
+            color: #4a5568;
+            margin-bottom: 0.5rem;
+        }
+
+        .file-tag {
+            display: inline-block;
+            background: #e2e8f0;
+            color: #4a5568;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin: 0.2rem;
+        }
+
+        .warning {
+            background: #fffbeb;
+            border: 1px solid #f6e05e;
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            margin-bottom: 1rem;
+            font-size: 0.85rem;
+            color: #744210;
+            display: none;
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 1rem;
+            }
+
+            .drop-zone {
+                padding: 2rem 1rem;
+            }
+
+            .stats {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>FB Leads CSV Cleaner</h1>
+        <p class="subtitle">Upload Facebook Lead Ads CSV exports. Extracts contacts, deduplicates by name, and exports a clean CSV.</p>
+
+        <div class="drop-zone" id="drop-zone">
+            <div class="icon">📁</div>
+            <p>Drag &amp; drop CSV files here, or click to browse</p>
+            <span class="hint">No limit on number of files. Supports Facebook Leads CSV exports (UTF-16 tab-separated).</span>
+        </div>
+        <input type="file" id="file-input" accept=".csv" multiple>
+
+        <div class="warning" id="warning"></div>
+
+        <div class="file-list" id="file-list" style="display:none;">
+            <h3>Loaded Files:</h3>
+            <div id="file-tags"></div>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="label">Total Rows Parsed</div>
+                <div class="value" id="stat-total">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Unique Contacts</div>
+                <div class="value" id="stat-unique">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Duplicates Removed</div>
+                <div class="value" id="stat-dupes">0</div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button class="btn-download" id="btn-download" disabled>⬇ Download CSV</button>
+            <button class="btn-clear" id="btn-clear" disabled>✕ Clear All</button>
+        </div>
+
+        <div class="table-wrapper">
+            <table id="results-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>First Name</th>
+                        <th>Last Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                    </tr>
+                </thead>
+                <tbody id="results-body">
+                    <tr>
+                        <td colspan="5" class="empty-state">No data loaded yet. Drop CSV files above to get started.</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        (() => {
+            'use strict';
+
+            // State
+            let allRecords = new Map(); // key: "firstname|lastname" (lowercased), value: record object
+            let totalRowsParsed = 0;
+            let loadedFiles = [];
+            let warnings = [];
+
+            // DOM elements
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('file-input');
+            const btnDownload = document.getElementById('btn-download');
+            const btnClear = document.getElementById('btn-clear');
+            const resultsBody = document.getElementById('results-body');
+            const statTotal = document.getElementById('stat-total');
+            const statUnique = document.getElementById('stat-unique');
+            const statDupes = document.getElementById('stat-dupes');
+            const fileList = document.getElementById('file-list');
+            const fileTags = document.getElementById('file-tags');
+            const warningEl = document.getElementById('warning');
+
+            // --- TSV Parsing (handles quoted fields) ---
+
+            function parseTSVLine(line) {
+                const fields = [];
+                let current = '';
+                let inQuotes = false;
+
+                for (let i = 0; i < line.length; i++) {
+                    const char = line[i];
+                    if (char === '"') {
+                        if (inQuotes && line[i + 1] === '"') {
+                            current += '"';
+                            i++;
+                        } else {
+                            inQuotes = !inQuotes;
+                        }
+                    } else if (char === '\t' && !inQuotes) {
+                        fields.push(current.trim());
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                fields.push(current.trim());
+                return fields;
+            }
+
+            function parseTSV(text) {
+                // Remove BOM if present
+                if (text.charCodeAt(0) === 0xFEFF) {
+                    text = text.slice(1);
+                }
+
+                const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+                return lines.map(parseTSVLine);
+            }
+
+            // --- Column Detection ---
+
+            // Detect columns by header names
+            function findColumnByHeader(headers, possibleNames) {
+                for (let i = 0; i < headers.length; i++) {
+                    const h = headers[i].toLowerCase().replace(/[^a-z0-9 _]/g, '').trim();
+                    for (const name of possibleNames) {
+                        if (h === name) return i;
+                    }
+                }
+                return -1;
+            }
+
+            // Check if a value looks like an email
+            function looksLikeEmail(val) {
+                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
+            }
+
+            // Check if a value looks like a phone (has p: prefix or is mostly digits with 7-15 digits)
+            function looksLikePhone(val) {
+                if (val.startsWith('p:')) return true;
+                // Pure digits or starts with + followed by digits
+                const cleaned = val.replace(/[\s\-\(\)\.]/g, '');
+                if (/^\+?\d{7,15}$/.test(cleaned)) return true;
+                const digits = val.replace(/[^0-9]/g, '');
+                return digits.length >= 7 && digits.length <= 15 && !/[a-zA-Z]/.test(val);
+            }
+
+            // Check if a value looks like a name (not email, not phone, not URL, has letters)
+            function looksLikeName(val) {
+                if (!val) return false;
+                if (looksLikeEmail(val)) return false;
+                if (looksLikePhone(val)) return false;
+                if (val.startsWith('http')) return false;
+                if (val === 'inbox_url') return false;
+                if (/^[0-9]+$/.test(val)) return false;
+                return /[a-zA-Z]/.test(val);
+            }
+
+            // Detect if the header row's dynamic columns contain data instead of proper column names.
+            // Facebook sometimes puts the first record's values as column headers.
+            function detectColumnsByContent(headers) {
+                // Standard columns are always: id, created_time, ad_id, ad_name, adset_id,
+                // adset_name, campaign_id, campaign_name, form_id, form_name, is_organic, platform
+                // After 'platform', the dynamic/form-field columns begin.
+                // The last column is always 'inbox_url'.
+
+                const platformIdx = headers.findIndex(h =>
+                    h.toLowerCase().replace(/[^a-z]/g, '') === 'platform'
+                );
+                if (platformIdx === -1) return null;
+
+                const dynamicStart = platformIdx + 1;
+                // Exclude the last column if it's inbox_url
+                let dynamicEnd = headers.length;
+                if (headers[headers.length - 1].toLowerCase().replace(/[^a-z_]/g, '') === 'inbox_url' ||
+                    headers[headers.length - 1].toLowerCase().replace(/[^a-z_]/g, '') === 'inboxurl') {
+                    dynamicEnd = headers.length - 1;
+                }
+
+                const dynamicHeaders = headers.slice(dynamicStart, dynamicEnd);
+
+                // Check if ANY of the dynamic "header" values look like actual data
+                // (email, phone number, or a person's name rather than a field label)
+                let hasDataInHeaders = false;
+                for (const val of dynamicHeaders) {
+                    if (looksLikeEmail(val) || looksLikePhone(val)) {
+                        hasDataInHeaders = true;
+                        break;
+                    }
+                }
+
+                if (!hasDataInHeaders) return null;
+
+                // The header contains data values. Detect which position is email, phone, name.
+                let emailIdx = -1;
+                let phoneIdx = -1;
+                let nameIdx = -1;
+
+                for (let i = 0; i < dynamicHeaders.length; i++) {
+                    const val = dynamicHeaders[i];
+                    if (emailIdx === -1 && looksLikeEmail(val)) {
+                        emailIdx = dynamicStart + i;
+                    } else if (phoneIdx === -1 && looksLikePhone(val)) {
+                        phoneIdx = dynamicStart + i;
+                    } else if (nameIdx === -1 && looksLikeName(val)) {
+                        nameIdx = dynamicStart + i;
+                    }
+                }
+
+                return { emailIdx, phoneIdx, fullNameIdx: nameIdx, firstNameIdx: -1, lastNameIdx: -1, headerIsData: true };
+            }
+
+            // --- Phone Cleaning ---
+
+            function cleanPhone(val) {
+                if (!val) return '';
+                // Remove p: prefix, then keep only digits
+                let cleaned = val.replace(/^p:\+?/, '').replace(/^\+/, '');
+                return cleaned.replace(/[^0-9]/g, '');
+            }
+
+            // --- Name Splitting ---
+
+            function splitFullName(fullName) {
+                if (!fullName) return { firstName: '', lastName: '' };
+                const parts = fullName.trim().split(/\s+/);
+                if (parts.length === 1) {
+                    return { firstName: parts[0], lastName: '' };
+                }
+                // First word is first name, rest is last name
+                const firstName = parts[0];
+                const lastName = parts.slice(1).join(' ');
+                return { firstName, lastName };
+            }
+
+            // --- Process a single file ---
+
+            function processFile(text, fileName) {
+                const rows = parseTSV(text);
+                if (rows.length < 2) {
+                    warnings.push(`${fileName}: Too few rows to process.`);
+                    return;
+                }
+
+                const headers = rows[0];
+                const dataRows = rows.slice(1);
+
+                let emailIdx = -1;
+                let phoneIdx = -1;
+                let fullNameIdx = -1;
+                let firstNameIdx = -1;
+                let lastNameIdx = -1;
+                let headerIsData = false;
+
+                // FIRST: Check if the header row has data values instead of column names
+                // (Facebook bug where first record becomes the header for dynamic columns)
+                const contentDetection = detectColumnsByContent(headers);
+
+                if (contentDetection) {
+                    // Header contains data — use detected positions
+                    emailIdx = contentDetection.emailIdx;
+                    phoneIdx = contentDetection.phoneIdx;
+                    fullNameIdx = contentDetection.fullNameIdx;
+                    firstNameIdx = contentDetection.firstNameIdx;
+                    lastNameIdx = contentDetection.lastNameIdx;
+                    headerIsData = true;
+                } else {
+                    // Standard header names — detect by column name
+                    emailIdx = findColumnByHeader(headers, ['email', 'e-mail', 'email address']);
+                    phoneIdx = findColumnByHeader(headers, ['phone', 'phone number', 'telephone', 'mobile']);
+                    fullNameIdx = findColumnByHeader(headers, ['full name', 'full_name', 'fullname', 'name']);
+                    firstNameIdx = findColumnByHeader(headers, ['first name', 'firstname', 'first', 'fname']);
+                    lastNameIdx = findColumnByHeader(headers, ['last name', 'lastname', 'last', 'lname', 'surname']);
+                }
+
+                if (emailIdx === -1 && phoneIdx === -1 && fullNameIdx === -1 && firstNameIdx === -1) {
+                    warnings.push(`${fileName}: Could not detect email/phone/name columns.`);
+                    return;
+                }
+
+                // If the header row is actually data, process ALL rows (including header row).
+                // Otherwise skip the header row.
+                const rowsToProcess = headerIsData ? rows : dataRows;
+
+                for (const row of rowsToProcess) {
+                    let firstName = '';
+                    let lastName = '';
+                    let email = '';
+                    let phone = '';
+
+                    // Extract email
+                    if (emailIdx !== -1 && row[emailIdx]) {
+                        email = row[emailIdx].trim();
+                    }
+
+                    // Extract phone
+                    if (phoneIdx !== -1 && row[phoneIdx]) {
+                        phone = cleanPhone(row[phoneIdx]);
+                    }
+
+                    // Extract name
+                    if (firstNameIdx !== -1 && lastNameIdx !== -1) {
+                        firstName = row[firstNameIdx] ? row[firstNameIdx].trim() : '';
+                        lastName = row[lastNameIdx] ? row[lastNameIdx].trim() : '';
+                    } else if (fullNameIdx !== -1 && row[fullNameIdx]) {
+                        const split = splitFullName(row[fullNameIdx]);
+                        firstName = split.firstName;
+                        lastName = split.lastName;
+                    }
+
+                    // Skip rows with no usable name
+                    if (!firstName && !lastName) continue;
+
+                    totalRowsParsed++;
+
+                    const key = `${firstName.toLowerCase()}|${lastName.toLowerCase()}`;
+
+                    if (!allRecords.has(key)) {
+                        allRecords.set(key, { firstName, lastName, email, phone });
+                    } else {
+                        // Fill in missing fields from subsequent entries
+                        const existing = allRecords.get(key);
+                        if (!existing.email && email) existing.email = email;
+                        if (!existing.phone && phone) existing.phone = phone;
+                    }
+                }
+            }
+
+            // --- Read file as text, handling UTF-16 ---
+
+            function readFileAsText(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const buffer = e.target.result;
+                        const uint8 = new Uint8Array(buffer);
+
+                        // Detect BOM for encoding
+                        let text;
+                        if (uint8[0] === 0xFF && uint8[1] === 0xFE) {
+                            // UTF-16 LE
+                            const decoder = new TextDecoder('utf-16le');
+                            text = decoder.decode(buffer);
+                        } else if (uint8[0] === 0xFE && uint8[1] === 0xFF) {
+                            // UTF-16 BE
+                            const decoder = new TextDecoder('utf-16be');
+                            text = decoder.decode(buffer);
+                        } else {
+                            // Assume UTF-8
+                            const decoder = new TextDecoder('utf-8');
+                            text = decoder.decode(buffer);
+                        }
+                        resolve(text);
+                    };
+                    reader.onerror = reject;
+                    reader.readAsArrayBuffer(file);
+                });
+            }
+
+            // --- UI Updates ---
+
+            function updateUI() {
+                const uniqueCount = allRecords.size;
+                const dupesCount = totalRowsParsed - uniqueCount;
+
+                statTotal.textContent = totalRowsParsed;
+                statUnique.textContent = uniqueCount;
+                statDupes.textContent = dupesCount < 0 ? 0 : dupesCount;
+
+                btnDownload.disabled = uniqueCount === 0;
+                btnClear.disabled = uniqueCount === 0;
+
+                // Warnings
+                if (warnings.length > 0) {
+                    warningEl.style.display = 'block';
+                    warningEl.textContent = warnings.join(' | ');
+                } else {
+                    warningEl.style.display = 'none';
+                }
+
+                // Update table
+                if (uniqueCount === 0) {
+                    resultsBody.innerHTML = '<tr><td colspan="5" class="empty-state">No data loaded yet. Drop CSV files above to get started.</td></tr>';
+                    return;
+                }
+
+                let html = '';
+                let idx = 1;
+                for (const [, record] of allRecords) {
+                    html += `<tr>
+                        <td>${idx}</td>
+                        <td>${escapeHtml(record.firstName)}</td>
+                        <td>${escapeHtml(record.lastName)}</td>
+                        <td>${escapeHtml(record.email)}</td>
+                        <td>${escapeHtml(record.phone)}</td>
+                    </tr>`;
+                    idx++;
+                }
+                resultsBody.innerHTML = html;
+
+                // File tags
+                if (loadedFiles.length > 0) {
+                    fileList.style.display = 'block';
+                    fileTags.innerHTML = loadedFiles.map(f => `<span class="file-tag">${escapeHtml(f)}</span>`).join('');
+                }
+            }
+
+            function escapeHtml(str) {
+                if (!str) return '';
+                return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            }
+
+            // --- File Handling ---
+
+            async function handleFiles(files) {
+                const csvFiles = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.csv'));
+                if (csvFiles.length === 0) {
+                    alert('Please drop .csv files only.');
+                    return;
+                }
+
+                for (const file of csvFiles) {
+                    try {
+                        const text = await readFileAsText(file);
+                        processFile(text, file.name);
+                        loadedFiles.push(file.name);
+                    } catch (err) {
+                        warnings.push(`${file.name}: Failed to read file.`);
+                    }
+                }
+                updateUI();
+            }
+
+            // --- Export ---
+
+            function exportCSV() {
+                if (allRecords.size === 0) return;
+
+                let csv = 'First Name,Last Name,Email,Phone\n';
+                for (const [, record] of allRecords) {
+                    csv += `"${escapeCsvField(record.firstName)}","${escapeCsvField(record.lastName)}","${escapeCsvField(record.email)}","${escapeCsvField(record.phone)}"\n`;
+                }
+
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'contacts_cleaned.csv';
+                link.click();
+                URL.revokeObjectURL(url);
+            }
+
+            function escapeCsvField(str) {
+                if (!str) return '';
+                return str.replace(/"/g, '""');
+            }
+
+            // --- Event Listeners ---
+
+            dropZone.addEventListener('click', () => fileInput.click());
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('dragover');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                handleFiles(e.dataTransfer.files);
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                handleFiles(e.target.files);
+                fileInput.value = '';
+            });
+
+            btnDownload.addEventListener('click', exportCSV);
+
+            btnClear.addEventListener('click', () => {
+                allRecords.clear();
+                totalRowsParsed = 0;
+                loadedFiles = [];
+                warnings = [];
+                fileList.style.display = 'none';
+                fileTags.innerHTML = '';
+                updateUI();
+            });
+        })();
+    </script>
+</body>
+</html>
