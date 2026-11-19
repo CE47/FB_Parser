@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lead Template Converter</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f3f5f9; --surface:#fff; --border:#e2e6ee; --text:#1b2433; --muted:#667085;
+  --primary:#1f4fd8; --primary-d:#173fb0; --primary-l:#eaf0ff; --ok:#0f8a5f; --ok-l:#e6f6ef;
+  --warn:#b45309; --warn-l:#fff4e0; --err:#c0262d; --err-l:#fdecec;
+  --radius:10px; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+header{background:#0f1b33;color:#fff}
+.wrap{max-width:1200px;margin:0 auto;padding:0 20px}
+header .wrap{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:64px;flex-wrap:wrap;padding-top:10px;padding-bottom:10px}
+.brand{display:flex;align-items:center;gap:12px}
+.logo{width:34px;height:34px;border-radius:8px;background:var(--primary);display:grid;place-items:center}
+.brand h1{font-size:16px;margin:0;font-weight:600;letter-spacing:.2px}
+.brand small{display:block;color:#9fb0cf;font-size:12px;font-weight:400}
+.privacy{font-size:12px;color:#b9c6df;display:flex;align-items:center;gap:6px}
+main{padding:24px 0 48px}
+.steps{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.step{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:6px 12px;border-radius:999px}
+.step b{width:20px;height:20px;border-radius:50%;background:var(--border);color:var(--muted);display:grid;place-items:center;font-size:11px}
+.step.active{color:var(--primary);border-color:var(--primary)}
+.step.active b,.step.done b{background:var(--primary);color:#fff}
+.step.done{color:var(--ok)} .step.done b{background:var(--ok)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:20px}
+.card-h{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.card-h h2{margin:0;font-size:15px;font-weight:600}
+.card-h p{margin:2px 0 0;color:var(--muted);font-size:13px}
+.card-b{padding:20px}
+.drop{border:2px dashed #c3cde0;border-radius:var(--radius);padding:40px 20px;text-align:center;cursor:pointer;transition:.15s;background:#fafbfd}
+.drop:hover,.drop.over{border-color:var(--primary);background:var(--primary-l)}
+.drop svg{color:var(--primary)}
+.drop h3{margin:10px 0 4px;font-size:16px}
+.drop p{margin:0;color:var(--muted)}
+.drop:focus-visible{outline:3px solid #9db6f5}
+.btn{appearance:none;border:1px solid var(--border);background:#fff;color:var(--text);padding:9px 16px;border-radius:8px;font:inherit;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:.15s}
+.btn:hover{background:#f6f8fb}
+.btn.primary{background:var(--primary);border-color:var(--primary);color:#fff}
+.btn.primary:hover{background:var(--primary-d)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.file-info{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:16px}
+.chip{background:var(--primary-l);color:var(--primary);padding:4px 10px;border-radius:999px;font-size:12px;font-weight:500}
+.chip.ok{background:var(--ok-l);color:var(--ok)}
+.chip.warn{background:var(--warn-l);color:var(--warn)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
+.stat span{display:block;color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.5px}
+.stat strong{font-size:22px;font-weight:600}
+.map{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.map label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:4px}
+select,input[type=text]{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font:inherit;background:#fff;color:var(--text)}
+select:focus,input:focus{outline:2px solid #9db6f5;border-color:var(--primary)}
+.opts{display:flex;gap:24px;flex-wrap:wrap;margin-top:18px;padding-top:16px;border-top:1px solid var(--border)}
+.opts label{display:flex;gap:8px;align-items:flex-start;cursor:pointer;max-width:420px}
+.opts small{display:block;color:var(--muted)}
+.tbl-wrap{overflow:auto;max-height:480px;border-radius:0 0 var(--radius) var(--radius)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;max-width:280px;overflow:hidden;text-overflow:ellipsis}
+th{position:sticky;top:0;background:#f7f9fc;font-weight:600;color:#3b475c;z-index:1}
+tbody tr:hover{background:#f9fbff}
+td.empty{color:#c0c7d4}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.alert{padding:12px 16px;border-radius:8px;margin-bottom:16px;font-size:13px;display:none}
+.alert.show{display:block}
+.alert.err{background:var(--err-l);color:var(--err)}
+.alert.warn{background:var(--warn-l);color:var(--warn)}
+.hidden{display:none!important}
+footer{text-align:center;color:var(--muted);font-size:12px;padding-bottom:30px}
+@media(max-width:720px){
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .wrap{padding:0 14px}
+  .card-b{padding:14px}
+  .drop{padding:28px 14px}
+  .map{grid-template-columns:1fr}
+  .actions .btn{flex:1;justify-content:center}
+  .privacy{width:100%}
+  .step span{display:none}
+  .step.active span{display:inline}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <div class="logo"><svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h16v16H4zM4 10h16M10 4v16"/></svg></div>
+      <h1>Lead Template Converter<small>Convert lead exports to the standard import template</small></h1>
+    </div>
+    <div class="privacy"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>Files are processed in your browser and never uploaded.</div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="steps" aria-label="Progress">
+    <div class="step active" id="s1"><b>1</b><span>Upload</span></div>
+    <div class="step" id="s2"><b>2</b><span>Map columns</span></div>
+    <div class="step" id="s3"><b>3</b><span>Preview</span></div>
+    <div class="step" id="s4"><b>4</b><span>Export</span></div>
+  </div>
+
+  <div id="alert" class="alert" role="alert"></div>
+
+  <section class="card">
+    <div class="card-h"><div><h2>Upload source file</h2><p>Select an .xlsx, .xls or .csv lead export (e.g. College Leads.xlsx).</p></div></div>
+    <div class="card-b">
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Upload file">
+        <svg width="44" height="44" fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path d="M12 16V4m0 0l-4 4m4-4l4 4M4 16v3a1 1 0 001 1h14a1 1 0 001-1v-3"/></svg>
+        <h3>Drop your file here or tap to browse</h3>
+        <p>Only the first sheet is read</p>
+        <input type="file" id="file" accept=".xlsx,.xls,.csv" class="hidden">
+      </div>
+      <div class="file-info hidden" id="fileInfo">
+        <strong id="fname"></strong>
+        <span class="chip" id="frows"></span>
+        <span class="chip" id="fcols"></span>
+        <button class="btn" id="reset">Clear</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="work" class="hidden">
+    <div class="stats">
+      <div class="stat"><span>Source rows</span><strong id="stRows">0</strong></div>
+      <div class="stat"><span>Mapped fields</span><strong id="stMapped">0</strong></div>
+      <div class="stat"><span>Duplicates removed</span><strong id="stDup">0</strong></div>
+      <div class="stat"><span>Output rows</span><strong id="stOut">0</strong></div>
+    </div>
+
+    <section class="card">
+      <div class="card-h"><div><h2>Column mapping</h2><p>Each template column is matched to a source column automatically. Adjust if needed.</p></div></div>
+      <div class="card-b">
+        <div class="map" id="map"></div>
+        <div class="opts">
+          <label><input type="checkbox" id="oPhone" checked><span>Clean phone numbers<small>Removes the "p:" prefix from ContactNo.</small></span></label>
+          <label><input type="checkbox" id="oSplit"><span>Split full name into parts<small>Best effort: first word is FirstName, last word is LastName, the rest is MiddleName. Review before use.</small></span></label>
+          <label><input type="checkbox" id="oDedupe"><span>Remove duplicate rows<small>Matches on email or contact number.</small></span></label>
+          <label><input type="checkbox" id="oTrim" checked><span>Trim extra spaces<small>Cleans leading, trailing and repeated spaces.</small></span></label>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="card-h">
+        <div><h2>Preview</h2><p id="prevNote">Showing the first 50 rows.</p></div>
+        <div class="actions"><button class="btn primary" id="export">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16"/></svg>Export .xlsx</button></div>
+      </div>
+      <div class="tbl-wrap"><table id="prev"></table></div>
+    </section>
+  </div>
+</main>
+<footer>Output follows the template columns: # to IGName.</footer>
+
+<script>
+(function(){
+  // Template columns, in order. `auto` lists source header names that are matched automatically.
+  const TEMPLATE = [
+    {k:'#',                 auto:[], index:true},
+    {k:'Fullname',          auto:['full_name','fullname','full name','name']},
+    {k:'LastName',          auto:['last_name','lastname','last name','surname']},
+    {k:'FirstName',         auto:['first_name','firstname','first name']},
+    {k:'MiddleName',        auto:['middle_name','middlename','middle name']},
+    {k:'Email',             auto:['email','email_address','e-mail']},
+    {k:'ContactNo',         auto:['phone_number','phone','contact','contactno','mobile']},
+    {k:'FBName',            auto:['fbname','fb_name','facebook_name']},
+    {k:'Twitter',           auto:['twitter']},
+    {k:'FullHomeAddress',   auto:['fullhomeaddress','address','full_address','city']},
+    {k:'HomeAddressProv',   auto:['province','state','homeaddressprov']},
+    {k:'PreferredProgram',  auto:['preferredprogram','program','course']},
+    {k:'SchoolFrom',        auto:['schoolfrom','school']},
+    {k:'SchoolType',        auto:['schooltype']},
+    {k:'SchoolAddress',     auto:['schooladdress']},
+    {k:'LRN',               auto:['lrn']},
+    {k:'ListahananNo',      auto:['listahananno']},
+    {k:'StudentBenefits',   auto:['studentbenefits']},
+    {k:'IncomeLevel',       auto:['incomelevel']},
+    {k:'IncomeSource',      auto:['incomesource']},
+    {k:'FBProfileURL',      auto:['fbprofileurl','inbox_url','profile_url']},
+    {k:'IGName',            auto:['igname','instagram']}
+  ];
+
+  const $ = id => document.getElementById(id);
+  let headers = [], rows = [], srcName = '', mapping = {};
+
+  function setStep(n){
+    ['s1','s2','s3','s4'].forEach((id,i)=>{
+      const el=$(id); el.classList.toggle('active',i+1===n); el.classList.toggle('done',i+1<n);
+    });
+  }
+  function showAlert(msg,type){
+    const a=$('alert'); a.textContent=msg; a.className='alert show '+(type||'err');
+  }
+  function clearAlert(){ $('alert').className='alert'; }
+
+  // ----- Upload -----
+  const drop=$('drop'), fileIn=$('file');
+  drop.addEventListener('click',()=>fileIn.click());
+  drop.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault();fileIn.click();} });
+  ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('over');}));
+  ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('over');}));
+  drop.addEventListener('drop',e=>{ if(e.dataTransfer.files[0]) load(e.dataTransfer.files[0]); });
+  fileIn.addEventListener('change',()=>{ if(fileIn.files[0]) load(fileIn.files[0]); });
+  $('reset').addEventListener('click',reset);
+
+  function reset(){
+    headers=[];rows=[];fileIn.value='';
+    $('work').classList.add('hidden'); $('fileInfo').classList.add('hidden'); drop.classList.remove('hidden');
+    clearAlert(); setStep(1);
+  }
+
+  function load(file){
+    clearAlert();
+    if(typeof XLSX==='undefined'){ showAlert('The spreadsheet library failed to load. Check your internet connection and reload.'); return; }
+    if(!/\.(xlsx|xls|csv)$/i.test(file.name)){ showAlert('Unsupported file type. Please upload .xlsx, .xls or .csv.'); return; }
+    const fr=new FileReader();
+    fr.onerror=()=>showAlert('Could not read the file.');
+    fr.onload=e=>{
+      try{
+        const wb=XLSX.read(e.target.result,{type:'array',cellDates:false});
+        const ws=wb.Sheets[wb.SheetNames[0]];
+        const data=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false,blankrows:false});
+        if(data.length<2){ showAlert('The first sheet has no data rows.'); return; }
+        headers=data[0].map(h=>String(h).trim());
+        rows=data.slice(1);
+        srcName=file.name;
+        $('fname').textContent=file.name;
+        $('frows').textContent=rows.length.toLocaleString()+' rows';
+        $('fcols').textContent=headers.length+' columns';
+        $('fileInfo').classList.remove('hidden');
+        buildMapping(); $('work').classList.remove('hidden');
+        setStep(3); refresh();
+      }catch(err){ showAlert('Failed to parse the file: '+err.message); }
+    };
+    fr.readAsArrayBuffer(file);
+  }
+
+  // ----- Mapping -----
+  function buildMapping(){
+    const lower=headers.map(h=>h.toLowerCase());
+    const box=$('map'); box.innerHTML=''; mapping={};
+    TEMPLATE.forEach(t=>{
+      const wrap=document.createElement('div');
+      const lab=document.createElement('label'); lab.textContent=t.k; lab.htmlFor='m_'+t.k;
+      const sel=document.createElement('select'); sel.id='m_'+t.k;
+      const first=document.createElement('option'); first.value='-1';
+      first.textContent=t.index?'Auto number (1, 2, 3...)':'— Leave blank —';
+      sel.appendChild(first);
+      headers.forEach((h,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=h||('Column '+(i+1)); sel.appendChild(o); });
+      let idx=-1;
+      for(const a of t.auto){ const j=lower.indexOf(a); if(j>-1){idx=j;break;} }
+      sel.value=String(idx);
+      mapping[t.k]=idx;
+      sel.addEventListener('change',()=>{ mapping[t.k]=+sel.value; refresh(); });
+      wrap.appendChild(lab); wrap.appendChild(sel); box.appendChild(wrap);
+    });
+  }
+  ['oPhone','oSplit','oDedupe','oTrim'].forEach(id=>$(id).addEventListener('change',refresh));
+
+  // ----- Transform -----
+  function clean(v,trim){
+    v=v==null?'':String(v);
+    return trim?v.replace(/\s+/g,' ').trim():v;
+  }
+  function splitName(full){
+    const p=full.split(' ').filter(Boolean);
+    if(p.length===0) return ['','',''];
+    if(p.length===1) return [p[0],'',''];
+    return [p[0],p.slice(1,-1).join(' '),p[p.length-1]]; // first, middle, last
+  }
+  function build(){
+    const trim=$('oTrim').checked, phone=$('oPhone').checked, split=$('oSplit').checked, dedupe=$('oDedupe').checked;
+    const out=[]; const seen=new Set(); let dup=0;
+    const emailI=mapping['Email'], phoneI=mapping['ContactNo'];
+    rows.forEach(r=>{
+      const rec={};
+      TEMPLATE.forEach(t=>{
+        if(t.index){ rec[t.k]=''; return; }
+        const i=mapping[t.k];
+        let v=i>-1?clean(r[i],trim):'';
+        if(t.k==='ContactNo'&&phone) v=v.replace(/^p:/i,'');
+        rec[t.k]=v;
+      });
+      if(split && rec.Fullname){
+        const [f,m,l]=splitName(rec.Fullname);
+        if(!rec.FirstName) rec.FirstName=f;
+        if(!rec.MiddleName) rec.MiddleName=m;
+        if(!rec.LastName) rec.LastName=l;
+      }
+      if(Object.values(rec).every(v=>v==='')) return; // skip empty rows
+      if(dedupe){
+        const keys=[];
+        if(emailI>-1&&rec.Email) keys.push('e:'+rec.Email.toLowerCase());
+        if(phoneI>-1&&rec.ContactNo) keys.push('p:'+rec.ContactNo.replace(/\D/g,''));
+        if(keys.some(k=>seen.has(k))){ dup++; return; }
+        keys.forEach(k=>seen.add(k));
+      }
+      out.push(rec);
+    });
+    out.forEach((r,i)=>r['#']=i+1);
+    return {out,dup};
+  }
+
+  function refresh(){
+    if(!rows.length) return;
+    const {out,dup}=build();
+    $('stRows').textContent=rows.length.toLocaleString();
+    $('stMapped').textContent=TEMPLATE.filter(t=>!t.index&&mapping[t.k]>-1).length+' / '+(TEMPLATE.length-1);
+    $('stDup').textContent=dup.toLocaleString();
+    $('stOut').textContent=out.length.toLocaleString();
+    const n=Math.min(50,out.length);
+    $('prevNote').textContent='Showing the first '+n+' of '+out.length.toLocaleString()+' rows.';
+    const tbl=$('prev'); tbl.innerHTML='';
+    const thead=tbl.createTHead().insertRow();
+    TEMPLATE.forEach(t=>{ const th=document.createElement('th'); th.textContent=t.k; thead.appendChild(th); });
+    const tb=tbl.createTBody();
+    for(let i=0;i<n;i++){
+      const tr=tb.insertRow();
+      TEMPLATE.forEach(t=>{
+        const td=tr.insertCell(); const v=out[i][t.k];
+        td.textContent=v===''?'—':v; if(v==='') td.className='empty'; else td.title=v;
+      });
+    }
+    $('export').disabled=!out.length;
+  }
+
+  // ----- Export -----
+  $('export').addEventListener('click',()=>{
+    const {out}=build();
+    if(!out.length) return;
+    const header=TEMPLATE.map(t=>t.k);
+    const aoa=[header].concat(out.map(r=>header.map(h=>h==='#'?r[h]:r[h])));
+    const ws=XLSX.utils.aoa_to_sheet(aoa);
+    // Keep long IDs and phone numbers as text so Excel does not alter them.
+    const textCols=['ContactNo','LRN','ListahananNo'].map(k=>header.indexOf(k));
+    for(let r=1;r<aoa.length;r++){
+      textCols.forEach(c=>{
+        const ref=XLSX.utils.encode_cell({r,c}); const cell=ws[ref];
+        if(cell){ cell.t='s'; cell.v=String(aoa[r][c]); cell.z='@'; }
+      });
+    }
+    const widths=[6,24,16,16,16,30,16,18,14,26,20,22,22,14,24,14,14,16,14,14,56,16];
+    ws['!cols']=widths.map(w=>({wch:w}));
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'Sheet1');
+    const base=srcName.replace(/\.[^.]+$/,'')||'export';
+    XLSX.writeFile(wb,base+' - template.xlsx');
+    setStep(4);
+  });
+})();
+</script>
+</body>
+</html>
